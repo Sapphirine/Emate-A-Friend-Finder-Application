@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<!--Following is the definition of HEAD (appearance)-->
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <!--Following is the css style sheet (because it failed to recognize a seperate css file)-->
+  <style type="text/css">
+    html, body { height: 100%; margin: 0; padding: 0; }
+    #map { height: 60%;
+      width: 60%;
+      margin-left: 0;
+      display:inline-block;
+    }
+
+    body {
+      background-image: url("http://wallpoper.com/images/00/44/03/84/soft-colors_00440384.jpg");
+      font-family: 'Helvetica Neue', sans-serif; 
+      font-size: 12px; 
+      font-weight: bold; 
+      letter-spacing: -1px; line-height: 1; 
+      text-align: center;
+    }
+
+    p {
+      color: rgb(255, 128, 0);
+      font-family: 'Helvetica Neue', sans-serif; 
+      font-size: 20px; 
+      text-align: center;
+    }
+
+    h1 { 
+      font-family:Georgia,serif;
+      color:#FA792F;
+      font-variant: small-caps; 
+      text-transform: none; 
+      font-size: 45px; 
+      font-weight: 100; 
+      margin-bottom: 20px;
+      margin-top: 70px;
+    }
+
+    ul {
+      background-color: white;
+    }
+
+    #dropdown {
+      background-color: yellow;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      padding: 12px 16px;
+      margin-bottom: 40px;
+    }
+
+    #floating-panel {
+      align:center;
+      top: 10px;
+      z-index: 5;
+      padding: 5px;
+      text-align: center;
+      font-family: 'Roboto','sans-serif';
+      line-height: 30px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: #9932CC; /* Green */
+      border: none;
+      color: white;
+      padding: 12px 16px;
+      text-align: center;
+      display: inline-block;
+      font-size: 8px;
+    }
+
+  </style>
+  <!--<script src="/static/jquery-2.1.3.min.js"></script>-->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script> 
+  <script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5O5pHXEn8v1avmYsLJsuAk2q73tQ-LY8&signed_in=true&libraries=visualization&callback=initMap">
+</script>
+<title>Find your E-mate</title>
+
+</head>
+
+<body>
+  <div id="links">
+    <h1>Come Find Your E-mate!</h1>
+    <p><b>Search for keyword</b></p>
+
+    <input type="text" id="myInput">
+    <button onclick="getPoints()">Click me</button>
+  </div>
+
+  <!--Floating pannel, should not be very important-->
+  <div id="floating-panel">
+    <button onclick="toggleHeatmap()">Toggle heatmap</button>
+    <button onclick="changeGradient()">Change gradient</button>
+    <button onclick="changeRadius()">Change radius</button>
+    <button onclick="changeOpacity()">Change opacity</button>
+  </div>
+
+  <div id="map"></div>
+  <script>
+    // This example requires the Visualization library. Include the libraries=visualization
+    // parameter when you first load the API. For example:
+    // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=visualization">
+
+    var map, heatmap, pos, infoWindow, tweetsInfoWindows;
+    var points = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: -34.397, lng: 150.644},
+        zoom: 6 // originally 2, now is 6
+      });
+
+      tweetsInfoWindows = [];
+      infoWindow = new google.maps.InfoWindow({map: map});
+      // Try HTML5 geolocation.
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+
+          infoWindow.setPosition(pos);
+          infoWindow.setContent('Your location.');
+          map.setCenter(pos);
+        }, function() {
+          handleLocationError(true, infoWindow, map.getCenter());
+        });
+      } else {
+        // Browser doesn't support Geolocation
+        handleLocationError(false, infoWindow, map.getCenter());
+      }
+
+      heatmap = new google.maps.visualization.HeatmapLayer({
+        data: new google.maps.MVCArray(points),
+        //map: map
+      });
+      heatmap.setMap(map)
+    }
+
+    function toggleHeatmap() {
+      heatmap.setMap(heatmap.getMap() ? null : map);
+    }
+    function changeGradient() {
+      var gradient = [
+      'rgba(0, 255, 255, 0)',
+      'rgba(0, 255, 255, 1)',
+      'rgba(0, 191, 255, 1)',
+      'rgba(0, 127, 255, 1)',
+      'rgba(0, 63, 255, 1)',
+      'rgba(0, 0, 255, 1)',
+      'rgba(0, 0, 223, 1)',
+      'rgba(0, 0, 191, 1)',
+      'rgba(0, 0, 159, 1)',
+      'rgba(0, 0, 127, 1)',
+      'rgba(63, 0, 91, 1)',
+      'rgba(127, 0, 63, 1)',
+      'rgba(191, 0, 31, 1)',
+      'rgba(255, 0, 0, 1)'
+      ]
+      heatmap.set('gradient', heatmap.get('gradient') ? null : gradient);
+    }
+    function changeRadius() {
+      heatmap.set('radius', heatmap.get('radius') ? null : 20);
+    }
+    function changeOpacity() {
+      heatmap.set('opacity', heatmap.get('opacity') ? null : 0.2);
+    }
+
+    // Heatmap data: 500 Points, IF DEFAULT IS SELECTED???
+    function getPoints() {
+      option = document.getElementById('myInput').value;
+
+      points = [];
+      if (option == 'default') {
+        return points;
+      }
+
+      if (tweetsInfoWindows.length != 0) {
+      	tweetsInfoWindows.forEach(function(w) {
+      		w.close();
+      	})
+      	tweetsInfoWindows = [];
+      }
+
+      sqr_dist = Number.MAX_SAFE_INTEGER;
+      all_locations = [];
+      points = [];
+
+      $.getJSON('getTwits/' + option + ' ' + pos.lat + ' ' + pos.lng, function (result) {
+        $.each(result.data, function (i, line) {
+          loc = new google.maps.LatLng(line.latitude, line.longitude);
+          all_locations.push([loc, line.text])
+        });
+
+        all_locations.forEach(function(tup) {
+          if (tup[0]) {
+            points.push(tup[0]);
+            tmpInfoWindow = new google.maps.InfoWindow({map: map, maxWidth: 100});
+            tmpInfoWindow.setPosition(tup[0]);
+            tmpInfoWindow.setContent(tup[1]);
+            tweetsInfoWindows.push(tmpInfoWindow)
+          } else {
+            pointArray = new google.maps.MVCArray(points);
+            heatmap.setData(pointArray);
+            infoWindow.setContent('Sorry, no points with certain keyword found.');
+          }
+        });
+        pointArray = new google.maps.MVCArray(points);
+        heatmap.setData(pointArray);
+      });
+    }
+  </script>
+</body>
+</html>
